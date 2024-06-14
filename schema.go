@@ -1,6 +1,7 @@
 package schemas
 
 import (
+	"fmt"
 	"net/url"
 	"reflect"
 )
@@ -9,50 +10,56 @@ const (
 	tagSchema        = "schema"
 	tagSchemaDefault = "default"
 	tagRequired      = "required"
+	tagSub           = "sub"
 	tagSkip          = "-"
 	emptyTagSchema   = ""
 	emptyValue       = ""
 	requiredTrue     = "true"
+	subTrue          = "true"
 )
 
-type field interface {
+type Field interface {
 	Parse(raw, def string) error
+	Set(set bool)
 }
 
-func Parse(obj any, query url.Values) error {
+var splitter = "."
+
+func SetSplitter(newSplitter string) {
+	splitter = newSplitter
+}
+
+func Parse(obj any, query url.Values, prefix string) (url.Values, error) {
+	var err error
+
 	v := reflect.ValueOf(obj)
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	} else {
-		return PointerError
+		return nil, PointerError
 	}
 
 	if v.Kind() != reflect.Struct {
-		return TypeError
+		return nil, TypeError
 	}
 
 	t := v.Type()
 
 	for i := 0; i < t.NumField(); i++ {
+		fieldValue := v.Field(i)
+
 		fieldStruct := t.Field(i)
 		name := fieldStruct.Tag.Get(tagSchema)
 		def := fieldStruct.Tag.Get(tagSchemaDefault)
 		required := fieldStruct.Tag.Get(tagRequired)
+		sub := fieldStruct.Tag.Get(tagSub) == subTrue
 
 		if name == tagSkip {
 			continue
 		}
 
-		fieldValue := v.Field(i)
-
-		if name == emptyTagSchema {
-			if fieldValue.Kind() == reflect.Pointer && fieldValue.Elem().Kind() == reflect.Struct {
-				err := Parse(fieldValue.Interface(), query)
-				if err != nil {
-					return err
-				}
-			}
-			continue
+		if prefix != "" {
+			name = fmt.Sprintf(`%s%s%s`, prefix, splitter, name)
 		}
 
 		if fieldValue.Kind() == reflect.Pointer && fieldValue.IsNil() {
@@ -60,26 +67,54 @@ func Parse(obj any, query url.Values) error {
 			fieldValue.Set(newField)
 		}
 
+		if name == emptyTagSchema || sub {
+
+			if fieldValue.Kind() == reflect.Struct {
+				fieldValue = fieldValue.Addr()
+			}
+
+			if fieldValue.Elem().Kind() == reflect.Struct {
+				query, err = Parse(fieldValue.Interface(), query, name)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				return nil, SubStructError
+			}
+
+			if name == emptyTagSchema {
+				continue
+			}
+		}
+
 		if fieldValue.Kind() != reflect.Pointer {
 			fieldValue = fieldValue.Addr()
 		}
 
 		interfaceValue := fieldValue.Interface()
-		f, ok := interfaceValue.(field)
+		field, ok := interfaceValue.(Field)
 
 		if !ok {
-			return FieldError
+			if sub {
+				continue
+			}
+			return nil, FieldError
 		}
 
 		val := query.Get(name)
 		if val == emptyValue && required == requiredTrue {
-			return NewRequiredError(name)
+			return nil, newRequiredError(name)
 		}
 
-		err := f.Parse(val, def)
+		delete(query, name)
+
+		_, ok = query[name]
+
+		field.Set(ok)
+		err = field.Parse(val, def)
 		if err != nil {
-			return NewParseError(name, val)
+			return nil, newParseError(name, val)
 		}
 	}
-	return nil
+	return query, nil
 }

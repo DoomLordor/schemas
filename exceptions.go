@@ -8,31 +8,14 @@ import (
 var TypeError = errors.New("schema not a struct")
 var PointerError = errors.New("schema not pointer")
 var FieldError = errors.New("schema field not implementation interface `Field`")
+var ParseFieldError = errors.New("parse field error")
+var RequiredError = errors.New("required error")
+var SubStructError = errors.New("sub struct not a struct or pointer on struct")
 
-type ParseFieldError struct {
-	name  string
-	value string
+func newParseError(name, value string) error {
+	return fmt.Errorf(`%v: "%s" error from value "%s"`, ParseFieldError, name, value)
 }
 
-func (p *ParseFieldError) Error() string {
-	return fmt.Sprintf(`parse field "%s" error from value "%s"`, p.name, p.value)
-}
-
-func NewParseError(name, value string) error {
-	return &ParseFieldError{
-		name:  name,
-		value: value,
-	}
-}
-
-type RequiredError struct {
-	name string
-}
-
-func (r *RequiredError) Error() string {
-	return fmt.Sprintf(`"%s" required`, r.name)
-}
-
-func NewRequiredError(name string) error {
-	return &RequiredError{name: name}
+func newRequiredError(name string) error {
+	return fmt.Errorf(`%v: "%s" required`, RequiredError, name)
 }

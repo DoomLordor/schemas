@@ -40,3 +40,7 @@ func (f *FloatFiled) IsSet() bool {
 func (f *FloatFiled) Value() float64 {
 	return f.value
 }
+
+func (f *FloatFiled) IsMultiple() bool {
+	return false
+}

@@ -26,3 +26,7 @@ func (f *StringFiled) IsSet() bool {
 func (f *StringFiled) Value() string {
 	return f.value
 }
+
+func (f *StringFiled) IsMultiple() bool {
+	return false
+}

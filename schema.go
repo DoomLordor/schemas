@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strings"
 )
 
 const (
@@ -16,11 +17,13 @@ const (
 	emptyValue       = ""
 	requiredTrue     = "true"
 	subTrue          = "true"
+	ValuesSplitter   = ","
 )
 
 type Field interface {
 	Parse(raw, def string) error
 	Set(set bool)
+	IsMultiple() bool
 }
 
 var splitter = "."
@@ -101,14 +104,17 @@ func Parse(obj any, query url.Values, prefix string) (url.Values, error) {
 			return nil, FieldError
 		}
 
-		val := query.Get(name)
+		values, ok := query[name]
+		if !field.IsMultiple() && len(values) > 1 {
+			values = values[:1:1]
+		}
+
+		val := strings.Join(values, ValuesSplitter)
 		if val == emptyValue && required == requiredTrue {
 			return nil, newRequiredError(name)
 		}
 
 		delete(query, name)
-
-		_, ok = query[name]
 
 		field.Set(ok)
 		err = field.Parse(val, def)
@@ -116,5 +122,6 @@ func Parse(obj any, query url.Values, prefix string) (url.Values, error) {
 			return nil, newParseError(name, val)
 		}
 	}
+
 	return query, nil
 }

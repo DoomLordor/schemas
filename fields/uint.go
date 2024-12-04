@@ -4,12 +4,12 @@ import (
 	"strconv"
 )
 
-type IntFiled struct {
-	value int64
+type UintFiled struct {
+	value uint64
 	set   bool
 }
 
-func (f *IntFiled) Parse(raw, def string) error {
+func (f *UintFiled) Parse(raw, def string) error {
 	f.value = 0
 
 	if raw == emptyValue {
@@ -20,7 +20,7 @@ func (f *IntFiled) Parse(raw, def string) error {
 		return nil
 	}
 
-	value, err := strconv.ParseInt(raw, 10, 64)
+	value, err := strconv.ParseUint(raw, 10, 64)
 	if err != nil {
 		return err
 	}
@@ -29,18 +29,18 @@ func (f *IntFiled) Parse(raw, def string) error {
 	return nil
 }
 
-func (f *IntFiled) Set(set bool) {
+func (f *UintFiled) Set(set bool) {
 	f.set = set
 }
 
-func (f *IntFiled) IsSet() bool {
+func (f *UintFiled) IsSet() bool {
 	return f.set
 }
 
-func (f *IntFiled) Value() int64 {
+func (f *UintFiled) Value() uint64 {
 	return f.value
 }
 
-func (f *IntFiled) IsMultiple() bool {
+func (f *UintFiled) IsMultiple() bool {
 	return false
 }

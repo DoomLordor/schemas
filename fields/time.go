@@ -57,3 +57,7 @@ func (f *TimeFiled) SetValue(value *time.Time) {
 func (f *TimeFiled) Value() *time.Time {
 	return f.value
 }
+
+func (f *TimeFiled) IsMultiple() bool {
+	return false
+}
